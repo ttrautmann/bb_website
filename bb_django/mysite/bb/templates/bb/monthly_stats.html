@@ -1,0 +1,120 @@
+
+<html>
+<head>
+    <title>Statistik</title>
+    {% load static %}
+    <link style="text/css" rel="stylesheet" href={% static "css/monthly_stats_style.css" %}
+</head>
+<body>
+<table>
+<tr>
+
+<th colspan="5">
+<h1>{% if month %}Monatsauswertung {{ month }}/{{ year }}
+{% else %}Jahresauswertung {{ year }}
+</h1>
+{% endif %}
+
+{% if error_message %} <p><strong>{{ error_message }}</strong>
+</p>{% endif %}
+</th>
+</tr>
+<tr>
+    <td>
+        <h2>Basketballjunkie</h2>
+        <ul>
+        {% for player in plays %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Kaffegott</h2>
+        <img src={% static "bb/coffee.jpg" %} height=30 width=30>
+        <ul>
+        {% for player in losses %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Angestellter des Wasserkochers</h2>
+        <ul>
+        {% for player in relativeLosses %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Goldenes Händchen</h2>
+        <ul>
+        {% for player in pointstreak %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Tennisarm</h2>
+        <ul>
+        {% for player in zerostreak %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+</tr>
+<tr>
+    <td>
+        <h2>Fluktuationsmonster</h2>
+        <ul>
+        {% for player in stdev %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Durchschnitt</h2>
+        <ul>
+        {% for player in mean %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Gladiator</h2>
+        <ul>
+        {% for player in gladiatorPoints %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+
+{% if threePoints %}
+    <td>
+        <h2>Angeber</h2>
+        <ul>
+        {% for player in threePoints %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+{% endif %}
+    <td>
+    <h2>Nachsitzer</h2>
+        <ul>
+        {% for player in secondRound %}
+            <li>{{ player.0}} {{ player.1 }}</li>
+        {% endfor %}
+        </ul>
+    </td>
+    <td>
+        <h2>Regular every day normal guy</h2>
+            <ul>
+                {% for player in norm_guy %}
+                <li>{{ player.0}} {{player.1}}</li>
+                {% endfor %}
+            </ul>
+    </td>
+</tr>
+</table>
+</body>
+</html>

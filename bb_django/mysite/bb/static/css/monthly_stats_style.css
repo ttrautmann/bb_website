@@ -1,0 +1,24 @@
+h1{
+    font-family:Futura;
+    text-align:center
+}
+
+h2{
+    font-family:Monospace;
+    text-align:center;
+}
+td {
+    text-align:center;
+    vertical-align:top;
+    padding:10px;
+    border: 1px solid black;
+    width:200px
+
+}
+ul {
+    list-style-type:none;
+    text-align:left;
+}
+table{
+    margin: 10px;
+}
