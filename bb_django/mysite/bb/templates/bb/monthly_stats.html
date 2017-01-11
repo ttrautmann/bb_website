@@ -3,7 +3,16 @@
 <head>
     <title>Statistik</title>
     {% load static %}
-    <link style="text/css" rel="stylesheet" href={% static "css/monthly_stats_style.css" %}
+    <link style="text/css" rel="stylesheet" href={% static "css/monthly_stats_style.css" %}>
+    <script type="text/javascript">
+        function toggle_visibility(id) {
+            var e = document.getElementById(id);
+            if(e.style.display == 'block')
+                e.style.display = 'none';
+            else
+                e.style.display = 'block';
+        }
+    </script>
 </head>
 <body>
 <table>
@@ -24,7 +33,7 @@
         <h2>Basketballjunkie</h2>
         <ul>
         {% for player in plays %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -33,7 +42,7 @@
         <img src={% static "bb/coffee.jpg" %} height=30 width=30>
         <ul>
         {% for player in losses %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -41,7 +50,7 @@
         <h2>Angestellter des Wasserkochers</h2>
         <ul>
         {% for player in relativeLosses %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -49,7 +58,7 @@
         <h2>Goldenes Händchen</h2>
         <ul>
         {% for player in pointstreak %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -57,7 +66,7 @@
         <h2>Tennisarm</h2>
         <ul>
         {% for player in zerostreak %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -67,15 +76,15 @@
         <h2>Fluktuationsmonster</h2>
         <ul>
         {% for player in stdev %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
     <td>
-        <h2>Durchschnitt</h2>
+        <h2>Solider Typ</h2>
         <ul>
         {% for player in mean %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -83,7 +92,7 @@
         <h2>Gladiator</h2>
         <ul>
         {% for player in gladiatorPoints %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -93,7 +102,7 @@
         <h2>Angeber</h2>
         <ul>
         {% for player in threePoints %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -102,7 +111,7 @@
     <h2>Nachsitzer</h2>
         <ul>
         {% for player in secondRound %}
-            <li>{{ player.0}} {{ player.1 }}</li>
+            <li>{{ player.0}} {{ player.1 }} {{ player.2 }}</li>
         {% endfor %}
         </ul>
     </td>
@@ -110,11 +119,20 @@
         <h2>Regular every day normal guy</h2>
             <ul>
                 {% for player in norm_guy %}
-                <li>{{ player.0}} {{player.1}}</li>
+                <li>{{ player.0}} {{player.1}} {{ player.2 }}</li>
                 {% endfor %}
             </ul>
     </td>
 </tr>
 </table>
+<br>
+<br>
+<br>
+<button type="button" id="showcake" onclick="toggle_visibility('cake');">Kuchenbäcker auswählen</button>
+<br>
+<br>
+<br>
+<div id="cake" style="display:none"><p>Kuchenbäcker: <b>{{mrcake.1}}</b> mit der Kategorie: <b>{{mrcake.0}}</b></p>
+</div>
 </body>
 </html>
