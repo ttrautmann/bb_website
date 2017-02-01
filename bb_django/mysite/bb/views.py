@@ -81,7 +81,7 @@ class Statistics:
                                                                  gladiator_points.index, gladiator_points)]
         # fluktuationsmonster
         throw_df_plays.result = throw_df_plays.loc[:, 'result'].apply(int)
-        stderivation = throw_df_plays.loc[:, ['name', 'result']].groupby(by='name').std()
+        stderivation = throw_df_plays.loc[:, ['name', 'result']].groupby(by='name').std().replace(np.nan,0)
         stderivation_sorted = stderivation.sort_values(by='result', ascending=0)
         std_ranks = [int(x) for x in stderivation_sorted.rank(method='min', ascending=False).values]
         self.statisticsdict['stdev'] = [x for x in zip(std_ranks,
