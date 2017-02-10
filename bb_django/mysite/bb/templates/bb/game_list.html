@@ -1,0 +1,13 @@
+<h1>Basketball</h1>
+{% if error_message %} <p><strong>{{ error_message }}</strong>
+</p>{% endif %}
+{% if not exist_game_today %}
+<p>Keine Würfe bislang heute... Das sollte sich ändern</p>
+<a href="{% url 'next_round' 1 %}">Neues Spiel</a>
+{% endif %}
+
+{% block content %}
+{% for game in games %}
+<p>Spiel am {{ game.date }} mit {{ game.n }} Würfen</p>
+{% endfor %}
+{% endblock %}
