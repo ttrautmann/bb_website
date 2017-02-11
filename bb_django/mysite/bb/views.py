@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from django.shortcuts import get_object_or_404, render
+import datetime
+
+import numpy as np
+import pandas as pd
+from django.db import models
+from django.forms import modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect
 from django.template import RequestContext, loader
 from django.utils import timezone
-import pandas as pd
-import numpy as np
+
 from .models import Throw, Player, DailyLoser, Gladiator
 
 
@@ -36,7 +41,7 @@ class Statistics:
         plays_ranks = plays.rank(method='min', ascending=False).astype(int)
         self.statisticsdict['plays'] = [x for x in zip(plays_ranks, plays.index, plays)]
         # relative plays
-        plays_df.loc[:, 'rel_plays'] = plays_df.loc[:, 'plays']/plays_total
+        plays_df.loc[:, 'rel_plays'] = plays_df.loc[:, 'plays'] / plays_total
         rel_plays = plays_df.loc[:, 'rel_plays']
         rel_plays_ranks = rel_plays.rank(method='min', ascending=False).astype(int)
         self.statisticsdict['relativePlays'] = [x for x in zip(rel_plays_ranks, rel_plays.index, rel_plays)]
@@ -44,10 +49,10 @@ class Statistics:
         losses_df = loser_df.T.groupby(by='name').count().sort_values(by='round', ascending=0)
         losses = losses_df.iloc[:, 1]
         losses_rank = losses.rank(method='min', ascending=False).astype(int)
-        self.statisticsdict['losses'] = [x for x in zip( losses_rank, losses.index, losses)]
+        self.statisticsdict['losses'] = [x for x in zip(losses_rank, losses.index, losses)]
         # relative losses
         rel_losses_df = pd.concat([plays_df.plays, losses_df.iloc[:, 1]], axis=1).replace(to_replace=np.nan, value=0)
-        rel_losses_unsorted = rel_losses_df.loc[:, 'round']/rel_losses_df.loc[:, 'plays']
+        rel_losses_unsorted = rel_losses_df.loc[:, 'round'] / rel_losses_df.loc[:, 'plays']
         rel_losses_sorted = rel_losses_unsorted.sort_values(axis=0, ascending=False)
         rel_losses = rel_losses_sorted.round(2)
         rel_los_ranks = rel_losses.rank(method='min', ascending=False).astype(int)
@@ -86,20 +91,20 @@ class Statistics:
         std_ranks = [int(x) for x in stderivation_sorted.rank(method='min', ascending=False).values]
         self.statisticsdict['stdev'] = [x for x in zip(std_ranks,
                                                        stderivation_sorted.index,
-                                                       [round(x, 2) for x in stderivation_sorted.values])]
+                                                       [round(x[0], 2) for x in stderivation_sorted.values])]
         # durchschnittspunktzahl
         mean = throw_df_plays.loc[:, ['name', 'result']].groupby(by='name').mean()
         mean_sorted = mean.sort_values(by='result', ascending=0)
         mean_ranks = [int(x) for x in mean_sorted.rank(method='min', ascending=False).values]
         self.statisticsdict['mean'] = [x for x in zip(mean_ranks,
-                                                      mean_sorted.index, [round(x, 2) for x in mean_sorted.values])]
+                                                      mean_sorted.index, [round(x[0], 2) for x in mean_sorted.values])]
         # angeber
         three_point_df = throw_df_plays.loc[:, ['name', 'result']].copy()
         three_point_ix = [i for i, x in enumerate(throw_df_plays.loc[:, 'result']) if x == 3]
         three_point_df_n = three_point_df.iloc[three_point_ix, :].groupby(by='name').count()
         three_point_df_sorted = three_point_df_n.sort_values(by='result', ascending=0)
         if len(three_point_df_n) > 0:
-            three_point_ranks = [int(x) for x in three_point_df_sorted.rank(method='min',ascending=False).values]
+            three_point_ranks = [int(x) for x in three_point_df_sorted.rank(method='min', ascending=False).values]
             self.statisticsdict['threePoints'] = [x for x in zip(three_point_ranks,
                                                                  three_point_df_sorted.index,
                                                                  [int(x) for x in three_point_df_sorted.values])]
@@ -116,7 +121,7 @@ class Statistics:
         # Norm guy by Mathias Seibert
         norm_guy = []
         norm_names = pd.DataFrame(index=pd.DataFrame(self.statisticsdict['mean']).iloc[:, 1])
-        stat_keys = self.statisticsdict.keys()
+        stat_keys = list(self.statisticsdict.keys())
         stat_keys.remove('TotalPlays')
         for key in stat_keys:
             temp = pd.DataFrame(self.statisticsdict[key])
@@ -124,7 +129,7 @@ class Statistics:
             temp.set_index('name', inplace=True)
             temp = norm_names.join(temp)
             temp.replace(np.nan, 0, inplace=True)
-            score = np.sqrt((temp.result - np.median(temp.result))**2)
+            score = np.sqrt((temp.result - np.median(temp.result)) ** 2)
             score_norm = score / score.max()
             norm_guy.append(score_norm)
         norm_guy_result_df = pd.concat(norm_guy, axis=1).mean(axis=1).sort_values()
@@ -134,10 +139,10 @@ class Statistics:
                                                           norm_guy_result_df.index,
                                                           [round(x, 2) for x in norm_guy_result_df.values])]
         # Get Cake Guy
-        relevant_categories = self.statisticsdict.keys()
+        relevant_categories = list(self.statisticsdict.keys())
         relevant_categories.remove('TotalPlays')
         relevant_categories.remove('relativePlays')
-        winner_categorie = relevant_categories[np.random.random_integers(0, len(relevant_categories)-1)]
+        winner_categorie = relevant_categories[np.random.random_integers(0, len(relevant_categories) - 1)]
         categorie_dict = {
             'plays': u'Basketballjunkie',
             'losses': u'Kaffegott',
@@ -161,147 +166,97 @@ class Statistics:
         self.statisticsdict['mrcake'] = (categorie_dict[winner_categorie], cake_baker)
 
 
-def index(request):
-    latest_throws_list = Throw.objects.filter(event_time__gte=timezone.now().date())
-    if len(latest_throws_list) > 0:
-        throws_df = pd.concat([x.get_pd() for x in latest_throws_list], axis=1)
-        throws_df.index = ['name', 'date', 'result', 'round']
-        already_played = [Player.objects.get(player_name=x).id for x in throws_df.loc['name', :]]
-    else:
-        already_played = []
-    context_dict = {
-        'latest_throws_list': latest_throws_list,
-        'players': [x for x in Player.objects.all() if x.id not in already_played],
-        'scores': range(4),
-        'day': timezone.now().date(),
-        'round_nr': 2
-    }
-    if len(latest_throws_list) > 1:
-        context_dict['show_eval_button'] = 1
-
-    template = loader.get_template('bb/index.html')
-    context = RequestContext(request, context_dict)
-    return HttpResponse(template.render(context))
-
-
-def detail(request, throw_id):
-    throw = get_object_or_404(Throw, pk=throw_id)
-    return render(request, 'bb/detail.html', {'throw': throw})
-
-
-def input(request):
-    input_player = get_object_or_404(Player, pk=request.POST['player'])
-    new_throw = Throw(result=request.POST['score'], event_time=timezone.now(), player=input_player, round=1)
-    new_throw.save()
-    return HttpResponseRedirect('/bb/')
+def game_list(request):
+    '''creates the view for the list of throws'''
+    # get throws from last 30 days and group by date and make group count of throws
+    latest_games = (Throw.objects.filter(event_time__gte=timezone.now().date() - datetime.timedelta(days=30)).
+                    extra(select={'date': 'date(event_time)'}).
+                    values('date').
+                    order_by('-date').
+                    annotate(n=models.Count("pk")))
+    # is today in selection?
+    exist_game_today = latest_games.filter(event_time__date=timezone.now().date())
+    return render(request, 'bb/game_list.html', {'games': latest_games,
+                                                 'exist_game_today': exist_game_today})
 
 
 def next_round(request, round_nr):
-    # Test if first round was the only one
+    '''creates the view for all throws in a round'''
+    # turn to integer as can be passed from template
+    round_nr = int(round_nr)
+    # get today's date
     eval_day = timezone.now().date()
-    throws_list_filter = Throw.objects.filter(event_time__gte=eval_day, round=str(int(round_nr)-1))
-    if len(Throw.objects.filter(event_time__gte=eval_day, round=round_nr)) > 0:
-        return HttpResponseRedirect('/bb/')
-    if len(throws_list_filter) == 0:
-        return HttpResponseRedirect('/bb/')
+    if round_nr == 1:
+        # get all currently active players
+        active_players = Player.objects.filter(is_active=True)
     else:
-        throws_df = pd.concat([x.get_pd() for x in throws_list_filter], axis=1)
-        throws_df.index = ['name', 'date', 'result', 'round']
-        nr_of_player_next_round = sum(throws_df.loc['result', :].values == min(throws_df.loc['result', :].values))
-        final_round_trigger = nr_of_player_next_round == 1
-        if final_round_trigger:
-            last_round = throws_df.T
-            loser = [x[0] for x in last_round.values if x[2] == last_round.result.min()]
-            gladiator_1 = [x[0] for x in last_round.values if x[2] != last_round.result.min() and x[2] == 1]
-            gladiator_15 = [x[0] for x in last_round.values if x[2] != last_round.result.min() and x[2] == 2]
-            gladiator_2 = [x[0] for x in last_round.values if x[2] != last_round.result.min() and x[2] == 3]
+        # get players from last round
+        last_round = Throw.objects.filter(event_time__date=eval_day, round=round_nr - 1)
+        # get last rounds lowest score
+        lowest_score = last_round.aggregate(models.Min('result'))['result__min']
+        # get all player objects by a list of last rounds' players with lowest score
+        active_players = Player.objects.filter(
+            id__in=list(last_round.filter(result=lowest_score).values_list('player', flat=True)))
+
+        if len(active_players) == 1:
+            # if only player is left, sync other model entries loser and gladiator
+            # TODO: remove redundancy
+            # get last rounds loser
             loser_da = DailyLoser(day=eval_day,
-                                  loser=get_object_or_404(Player, player_name=loser[0]),
-                                  round=int(round_nr)-1)
+                                  loser=active_players[0],
+                                  round=round_nr - 1)
             loser_da.save()
+            # get all last rounds' players with not lowest score
+            glad_players = last_round.exclude(result=lowest_score).values('player', 'result')
+            for glad_player in glad_players:
+                gladiator_da = Gladiator(day=eval_day,
+                                         gladiator=Player.objects.get(id=glad_player['player']),
+                                         points=1 + (glad_player['result'] - 1) * 0.5,
+                                         round=round_nr - 1)
+                gladiator_da.save()
+            # redirect to index view
+            return redirect('game_list')
 
-            if len(gladiator_1) > 0:
-                for x in gladiator_1:
-                    gladiator_da = Gladiator(day=eval_day,
-                                             gladiator=get_object_or_404(Player, player_name=x),
-                                             points=1, round=int(round_nr)-1)
-                    gladiator_da.save()
-
-            if len(gladiator_15) > 0:
-                for x in gladiator_15:
-                    gladiator_da = Gladiator(day=eval_day,
-                                             gladiator=get_object_or_404(Player, player_name=x),
-                                             points=1.5, round=int(round_nr)-1)
-                    gladiator_da.save()
-
-            if len(gladiator_2) > 0:
-                for x in gladiator_2:
-                    gladiator_da = Gladiator(day=eval_day,
-                                             gladiator=get_object_or_404(Player, player_name=x),
-                                             points=2, round=int(round_nr)-1)
-                    gladiator_da.save()
-            return HttpResponseRedirect('/bb/')
-        else:
-            new_round_nr = int(round_nr)+1
-            next_round_player = throws_df.iloc[0,
-                                               throws_df.loc['result', :].values == min(throws_df.loc['result',
-                                                                                        :].values)]
-            next_players = [Player.objects.get(player_name=x) for x in next_round_player]
-            template = loader.get_template('bb/round_input.html')
-            context = RequestContext(request, {
-                'players': next_players,
-                'scores': range(4),
-                'day': timezone.now().date(),
-                'round_nr': new_round_nr,
-                'round_nr_display': new_round_nr-1
-            })
-            return HttpResponse(template.render(context))
+    # make factory of modelformsets
+    # use only field result, scale by length of active players
+    RoundFormSet = modelformset_factory(Throw, fields=('result',), extra=len(active_players))
+    if request.method == 'POST':
+        formset = RoundFormSet(request.POST)
+        if formset.is_valid():
+            # save commits to instance
+            form_entries = formset.save(commit=False)
+            for form, player in zip(form_entries, active_players):
+                # now add player and round_nr to instance
+                form.player = player
+                form.round = round_nr
+                form.save()
+            # redirect to this view reloaded with advanced round number
+            return redirect('next_round', round_nr + 1)
+    else:
+        # populate formset with today's throws for specific round
+        formset = RoundFormSet(queryset=Throw.objects.filter(event_time__date=eval_day, round=round_nr))
+    return render(request, 'bb/round_input.html',
+                  {'formset': formset, 'player_list': active_players, 'round_nr': round_nr})
 
 
-def next_round_input(request, round_nr):
-    eval_day = timezone.now().date()
-    throws_list_filter = Throw.objects.filter(event_time__gte=eval_day, round=str(int(round_nr)-2))
-    throws_df = pd.concat([x.get_pd() for x in throws_list_filter], axis=1)
-    throws_df.index = ['name', 'date', 'result', 'round']
-    next_round_player = throws_df.iloc[0, throws_df.loc['result', :].values == min(throws_df.loc['result', :].values)]
-    next_players = [Player.objects.get(player_name=x).id for x in next_round_player]
-    for playerid in next_players:
-        input_player = get_object_or_404(Player, pk=playerid)
-        new_throw = Throw(result=request.POST[str(playerid)],
-                          event_time=timezone.now(),
-                          player=input_player,
-                          round=int(round_nr)-1)
-        new_throw.save()
-    return HttpResponseRedirect('/bb/round/'+str(round_nr)+'/')
+def month_stat(request, year, month=None):
+    event_time_kwargs = {'event_time__year': year}
+    day_kwargs = {'day__year': year}
+    if month:
+        event_time_kwargs['event_time__month'] = month
+        day_kwargs['day__month'] = month
 
-
-def month_stat(request, year, month):
-    monthly_throws = Throw.objects.filter(event_time__year=year, event_time__month=month)
-    monthly_loser = DailyLoser.objects.filter(day__year=year, day__month=month)
-    monthly_gladiator = Gladiator.objects.filter(day__year=year, day__month=month)
-    if len(monthly_loser) == 0:
-        return HttpResponseRedirect('/bb/')
+    monthly_throws = Throw.objects.filter(**event_time_kwargs)
+    monthly_loser = DailyLoser.objects.filter(**day_kwargs)
+    monthly_gladiator = Gladiator.objects.filter(**day_kwargs)
+    if not monthly_loser:
+        # redirect to index view
+        return redirect('game_list')
     else:
         context_dict = Statistics(monthly_throws, monthly_loser, monthly_gladiator).statisticsdict
         context_dict['year'] = year
         context_dict['month'] = month
-        template = loader.get_template('bb/monthly_stats.html')
-        context = RequestContext(request, context_dict)
-        return HttpResponse(template.render(context))
-
-
-def year_stat(request, year):
-    yearly_throws = Throw.objects.filter(event_time__year=year)
-    yearly_loser = DailyLoser.objects.filter(day__year=year)
-    yearly_gladiator = Gladiator.objects.filter(day__year=year)
-    if len(yearly_loser) == 0:
-        return HttpResponseRedirect('/bb/')
-    else:
-        context_dict = Statistics(yearly_throws, yearly_loser, yearly_gladiator).statisticsdict
-        context_dict['year'] = year
-        template = loader.get_template('bb/monthly_stats.html')
-        context = RequestContext(request, context_dict)
-        return HttpResponse(template.render(context))
+        return render(request, 'bb/monthly_stats.html', context_dict)
 
 
 def player_stat(request, player):

@@ -1,21 +1,16 @@
-<h1>Runde {{ round_nr_display }}</h1>
+{% load extra_tags %}
+
+<h1>Runde {{ round_nr }}</h1>
 {% if error_message %} <p><strong>{{ error_message }}</strong>
 </p>{% endif %}
 
-
-
 <h2>Wurfeintragung</h2>
-<form action="{% url 'next_round_input' round_nr %}"  method="post">
+<form method="post" action="">
     {% csrf_token %}
-    {% for player in players %}
-        {{ player.player_name }}
-        {% for score in scores %}
-        <input type="radio" name="{{ player.id }}" value="{{ score }}" />
-        <label>{{ score }}</label>
-        {% endfor %}</br>
-
+    {{ formset.management_form }}
+    {% for form, player in formset|zip:player_list %}
+    {{ player }} {{ form }}
+    <p></p>
     {% endfor %}
-
-    <input type="submit" value="ThrowInput">
+    <button type="submit">Save</button>
 </form>
-
