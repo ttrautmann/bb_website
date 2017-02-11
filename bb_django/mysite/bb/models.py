@@ -38,10 +38,6 @@ class Throw(models.Model):
                                                          self.player,
                                                          self.result)
 
-    def get_pd(self):
-        return pd.DataFrame([self.player.player_name, self.event_time, self.result, self.round])
-
-
 @python_2_unicode_compatible
 class DailyLoser(models.Model):
     '''Model for storing daily losers'''
@@ -52,8 +48,6 @@ class DailyLoser(models.Model):
     def __str__(self):
         return u'{:%y-%m-%d}_{:15}'.format(self.day, self.loser)
 
-    def get_pd(self):
-        return pd.DataFrame([self.loser.player_name, self.day, self.round])
 
 
 @python_2_unicode_compatible
@@ -67,5 +61,3 @@ class Gladiator(models.Model):
     def __str__(self):
         return u'{:%y-%m-%d}_{:15}_{}'.format(self.day, self.loser, self.points)
 
-    def get_pd(self):
-        return pd.DataFrame([self.gladiator.player_name, self.day, self.points, self.round])
