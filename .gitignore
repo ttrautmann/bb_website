@@ -5,3 +5,4 @@ myvenv
 .DS_Store
 .idea/
 bb_django/mysite/db.sqlite3
+bb_django/mysite/db.sqlite3

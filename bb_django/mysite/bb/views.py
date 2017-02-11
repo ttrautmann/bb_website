@@ -23,13 +23,17 @@ class Statistics:
         self.get_statistics()
 
     def get_statistics(self):
-        throw_df = pd.concat([x.get_pd() for x in self.throw_objects], axis=1)
-        throw_df.index = ['name', 'date', 'result', 'round']
-        loser_df = pd.concat([x.get_pd() for x in self.loser_objects], axis=1)
-        loser_df.index = ['name', 'date', 'round']
-        gladiator_df = pd.concat([x.get_pd() for x in self.gladiator_objects], axis=1)
-        gladiator_df.index = ['name', 'date', 'result', 'round']
-        throw_df_plays = throw_df.copy().T
+        player_dict = {x[0]: x[1] for x in Player.objects.values_list()}
+        throw_df = pd.DataFrame([x for x in self.throw_objects.values_list()])
+        throw_df.columns = ['pk', 'name', 'result', 'date', 'round']
+        throw_df['name'] = throw_df['name'].apply(lambda x: player_dict[x])
+        loser_df = pd.DataFrame([x for x in self.loser_objects.values_list()]).iloc[:, [2, 3]]
+        loser_df.columns = ['name', 'round']
+        loser_df['name'] = loser_df['name'].apply(lambda x: player_dict[x])
+        gladiator_df = pd.DataFrame([x for x in self.gladiator_objects.values_list()]).iloc[:, [2, 1, 3, 4]]
+        gladiator_df.columns = ['name', 'date', 'result', 'round']
+        gladiator_df['name'] = gladiator_df['name'].apply(lambda x: player_dict[x])
+        throw_df_plays = throw_df.loc[:, ['name', 'result', 'date', 'round']]
         plays_total = len(throw_df_plays.groupby(by='date').count())
         self.statisticsdict['TotalPlays'] = plays_total
         # Plays
@@ -46,12 +50,11 @@ class Statistics:
         rel_plays_ranks = rel_plays.rank(method='min', ascending=False).astype(int)
         self.statisticsdict['relativePlays'] = [x for x in zip(rel_plays_ranks, rel_plays.index, rel_plays)]
         # losses
-        losses_df = loser_df.T.groupby(by='name').count().sort_values(by='round', ascending=0)
-        losses = losses_df.iloc[:, 1]
+        losses = loser_df.groupby(by='name').count().sort_values(by='round', ascending=0).iloc[:, 0]
         losses_rank = losses.rank(method='min', ascending=False).astype(int)
         self.statisticsdict['losses'] = [x for x in zip(losses_rank, losses.index, losses)]
         # relative losses
-        rel_losses_df = pd.concat([plays_df.plays, losses_df.iloc[:, 1]], axis=1).replace(to_replace=np.nan, value=0)
+        rel_losses_df = pd.concat([plays_df.plays, losses], axis=1).replace(to_replace=np.nan, value=0)
         rel_losses_unsorted = rel_losses_df.loc[:, 'round'] / rel_losses_df.loc[:, 'plays']
         rel_losses_sorted = rel_losses_unsorted.sort_values(axis=0, ascending=False)
         rel_losses = rel_losses_sorted.round(2)
@@ -79,7 +82,7 @@ class Statistics:
         self.statisticsdict['zerostreak'] = [x for x in zip(zerostreak_ranks,
                                                             zerostreak_sorted.index, zerostreak_sorted)]
         # gladiator
-        gladiator_points_df = gladiator_df.T.groupby(by='name').sum().sort_values(by='result', ascending=0)
+        gladiator_points_df = gladiator_df.groupby(by='name').sum().sort_values(by='result', ascending=0)
         gladiator_points = gladiator_points_df.loc[:, 'result']
         glad_ranks = gladiator_points.rank(method='min', ascending=False).astype(int)
         self.statisticsdict['gladiatorPoints'] = [x for x in zip(glad_ranks,
